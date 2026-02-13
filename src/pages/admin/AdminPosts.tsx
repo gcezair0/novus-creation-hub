@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -13,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import BBCodeEditor from "@/components/BBCodeEditor";
 
 const AdminPosts = () => {
   const { user } = useAuth();
@@ -112,11 +112,11 @@ const AdminPosts = () => {
               </div>
               <div>
                 <Label>Resumo</Label>
-                <Textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} rows={2} />
+                <Input value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} placeholder="Breve resumo da postagem" />
               </div>
               <div>
-                <Label>Conteúdo (BBCode: [b], [i], [u], [img], [url], [quote], [list][*])</Label>
-                <Textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} />
+                <Label>Conteúdo (BBCode)</Label>
+                <BBCodeEditor value={form.content} onChange={(v) => setForm({ ...form, content: v })} />
               </div>
               <div>
                 <Label>URL da Imagem de Capa</Label>
