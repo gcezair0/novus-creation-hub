@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { parseBBCode } from "@/lib/bbcode";
 
 const PostDetail = () => {
   const { id } = useParams();
@@ -43,7 +44,7 @@ const PostDetail = () => {
           <img src={post.cover_image_url} alt={post.title} className="w-full h-64 md:h-96 object-cover rounded-lg mb-8" />
         )}
 
-        <div className="prose prose-lg max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: post.content || "" }} />
+        <div className="prose prose-lg max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: parseBBCode(post.content || "") }} />
       </div>
     </div>
   );

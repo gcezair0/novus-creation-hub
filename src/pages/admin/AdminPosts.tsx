@@ -115,7 +115,7 @@ const AdminPosts = () => {
                 <Textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} rows={2} />
               </div>
               <div>
-                <Label>Conteúdo (HTML)</Label>
+                <Label>Conteúdo (BBCode: [b], [i], [u], [img], [url], [quote], [list][*])</Label>
                 <Textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} />
               </div>
               <div>
