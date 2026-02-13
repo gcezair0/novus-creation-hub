@@ -64,53 +64,70 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Comunicados Carousel */}
-      {comunicados.length > 0 && (
-        <section className="py-16 bg-muted">
+      {/* Featured Carousel - Notícias & Comunicados com Imagens */}
+      {recentPosts && recentPosts.length > 0 && (
+        <section className="py-16 bg-background">
           <div className="container">
-            <h2 className="font-heading text-3xl font-bold text-center mb-8">Comunicados</h2>
-            <div className="relative max-w-3xl mx-auto">
-              <div className="overflow-hidden rounded-xl">
+            <h2 className="font-heading text-3xl font-bold text-center mb-8">Destaques</h2>
+            <div className="relative max-w-5xl mx-auto">
+              <div className="overflow-hidden rounded-2xl shadow-2xl">
                 <div
                   className="flex transition-transform duration-500 ease-in-out"
                   style={{ transform: `translateX(-${currentSlide * 100}%)` }}
                 >
-                  {comunicados.map((post) => (
-                    <div key={post.id} className="w-full flex-shrink-0 px-2">
-                      <Card className="border-2 border-primary/10">
-                        <CardContent className="p-8">
-                          {post.cover_image_url && (
-                            <img src={post.cover_image_url} alt={post.title} className="w-full h-48 object-cover rounded-lg mb-4" />
+                  {recentPosts.map((post) => (
+                    <div key={post.id} className="w-full flex-shrink-0">
+                      <Link to={`/noticias/${post.id}`} className="block group cursor-pointer">
+                        <div className="relative h-96 bg-muted overflow-hidden">
+                          {post.cover_image_url ? (
+                            <img 
+                              src={post.cover_image_url} 
+                              alt={post.title} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                              <span className="text-muted-foreground text-sm">Sem imagem</span>
+                            </div>
                           )}
-                          <span className="text-xs font-medium text-accent uppercase tracking-wider">Comunicado</span>
-                          <h3 className="font-heading font-semibold text-xl mt-2 mb-2">{post.title}</h3>
-                          <p className="text-muted-foreground text-sm line-clamp-3 mb-4">{post.excerpt}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">{new Date(post.created_at).toLocaleDateString("pt-BR")}</span>
-                            <Link to={`/noticias/${post.id}`} className="text-primary text-sm font-medium inline-flex items-center hover:underline">
-                              Ler mais <ArrowRight className="ml-1 h-3 w-3" />
-                            </Link>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+                            <span className="text-xs font-bold uppercase tracking-widest bg-primary/80 px-3 py-1 rounded-full inline-block mb-3">
+                              {post.category === "comunicado" ? "Comunicado" : post.category === "evento" ? "Evento" : "Notícia"}
+                            </span>
+                            <h3 className="font-heading font-bold text-2xl mb-2 line-clamp-2">{post.title}</h3>
+                            <p className="text-white/90 text-sm line-clamp-2">{post.excerpt}</p>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </Link>
                     </div>
                   ))}
                 </div>
               </div>
-              {totalSlides > 1 && (
+              {recentPosts.length > 1 && (
                 <>
-                  <Button variant="outline" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 rounded-full bg-background shadow-md" onClick={prevSlide}>
-                    <ChevronLeft className="h-4 w-4" />
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 rounded-full bg-background shadow-lg hover:bg-primary hover:text-primary-foreground z-10" 
+                    onClick={prevSlide}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <Button variant="outline" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 rounded-full bg-background shadow-md" onClick={nextSlide}>
-                    <ChevronRight className="h-4 w-4" />
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 rounded-full bg-background shadow-lg hover:bg-primary hover:text-primary-foreground z-10" 
+                    onClick={nextSlide}
+                  >
+                    <ChevronRight className="h-5 w-5" />
                   </Button>
-                  <div className="flex justify-center gap-2 mt-4">
-                    {comunicados.map((_, i) => (
+                  <div className="flex justify-center gap-2 mt-6">
+                    {recentPosts.map((_, i) => (
                       <button
                         key={i}
                         onClick={() => setCurrentSlide(i)}
-                        className={`w-2.5 h-2.5 rounded-full transition-colors ${i === currentSlide ? "bg-primary" : "bg-primary/20"}`}
+                        className={`h-3 rounded-full transition-all ${i === currentSlide ? "bg-primary w-8" : "bg-primary/30 w-3"}`}
                       />
                     ))}
                   </div>
@@ -174,22 +191,26 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Últimas Notícias */}
-      {noticias.length > 0 && (
-        <section className="py-20 bg-background">
+      {/* Todas as Notícias & Comunicados */}
+      {recentPosts.length > 3 && (
+        <section className="py-20 bg-muted">
           <div className="container">
-            <h2 className="font-heading text-3xl font-bold text-center mb-12">Últimas Notícias</h2>
+            <h2 className="font-heading text-3xl font-bold text-center mb-12">Últimas Postagens</h2>
             <div className="grid md:grid-cols-3 gap-8">
-              {noticias.slice(0, 3).map((post) => (
-                <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  {post.cover_image_url && (
-                    <img src={post.cover_image_url} alt={post.title} className="w-full h-48 object-cover" />
-                  )}
+              {recentPosts.slice(recentPosts.length > 6 ? 3 : 0, recentPosts.length > 6 ? 6 : 3).map((post) => (
+                <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                  <div className="relative h-48 bg-muted overflow-hidden">
+                    {post.cover_image_url ? (
+                      <img src={post.cover_image_url} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/10 to-accent/10" />
+                    )}
+                  </div>
                   <CardContent className="p-6">
                     <span className="text-xs font-medium text-accent uppercase tracking-wider">
-                      {post.category === "evento" ? "Evento" : "Notícia"}
+                      {post.category === "comunicado" ? "Comunicado" : post.category === "evento" ? "Evento" : "Notícia"}
                     </span>
-                    <h3 className="font-heading font-semibold text-lg mt-2 mb-2">{post.title}</h3>
+                    <h3 className="font-heading font-semibold text-lg mt-2 mb-2 line-clamp-2">{post.title}</h3>
                     <p className="text-muted-foreground text-sm line-clamp-2">{post.excerpt}</p>
                     <Link to={`/noticias/${post.id}`} className="text-primary text-sm font-medium mt-3 inline-flex items-center hover:underline">
                       Ler mais <ArrowRight className="ml-1 h-3 w-3" />
@@ -200,7 +221,7 @@ const Index = () => {
             </div>
             <div className="text-center mt-8">
               <Button asChild variant="outline">
-                <Link to="/noticias">Ver todas as notícias</Link>
+                <Link to="/noticias">Ver todas as postagens</Link>
               </Button>
             </div>
           </div>
