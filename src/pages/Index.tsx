@@ -192,7 +192,7 @@ const Index = () => {
       </section>
 
       {/* Todas as Notícias & Comunicados */}
-      {recentPosts.length > 3 && (
+      {(recentPosts?.length ?? 0) > 3 && (
         <section className="py-20 bg-muted">
           <div className="container">
             <h2 className="font-heading text-3xl font-bold text-center mb-12">Últimas Postagens</h2>
