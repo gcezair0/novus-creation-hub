@@ -15,7 +15,6 @@ import { toast } from "sonner";
 const AdminGrades = () => {
   const queryClient = useQueryClient();
 
-  // Classes
   const { data: classes } = useQuery({
     queryKey: ["admin-classes"],
     queryFn: async () => {
@@ -24,7 +23,6 @@ const AdminGrades = () => {
     },
   });
 
-  // Subjects
   const { data: subjects } = useQuery({
     queryKey: ["admin-subjects"],
     queryFn: async () => {
@@ -33,7 +31,6 @@ const AdminGrades = () => {
     },
   });
 
-  // Students
   const { data: students } = useQuery({
     queryKey: ["admin-students"],
     queryFn: async () => {
@@ -42,15 +39,15 @@ const AdminGrades = () => {
     },
   });
 
-  // Grade entry state
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedBimester, setSelectedBimester] = useState<string>("1");
 
   const filteredStudents = students?.filter((s) => s.class_id === selectedClass) || [];
 
-  const { data: grades } = useQuery({
-    queryKey: ["admin-grades", selectedClass, selectedSubject, selectedBimester],
+  // Fetch ALL grades for this class+subject (all bimesters) to compute average
+  const { data: allGrades } = useQuery({
+    queryKey: ["admin-all-grades", selectedClass, selectedSubject],
     queryFn: async () => {
       const studentIds = filteredStudents.map((s) => s.id);
       if (studentIds.length === 0) return [];
@@ -58,17 +55,33 @@ const AdminGrades = () => {
         .from("grades")
         .select("*")
         .in("student_id", studentIds)
-        .eq("subject_id", selectedSubject)
-        .eq("bimester", parseInt(selectedBimester));
+        .eq("subject_id", selectedSubject);
       return data || [];
     },
     enabled: !!selectedClass && !!selectedSubject && filteredStudents.length > 0,
   });
 
-  const gradeMap = grades?.reduce((acc, g) => {
-    acc[g.student_id] = g;
+  // Grade map for current bimester
+  const gradeMap = allGrades?.reduce((acc, g) => {
+    if (g.bimester === parseInt(selectedBimester)) {
+      acc[g.student_id] = g;
+    }
     return acc;
   }, {} as Record<string, any>) || {};
+
+  // Compute average per student (sum of all 4 bimesters / 4)
+  const averageMap: Record<string, number | null> = {};
+  if (allGrades) {
+    const grouped: Record<string, (number | null)[]> = {};
+    allGrades.forEach((g) => {
+      if (!grouped[g.student_id]) grouped[g.student_id] = [null, null, null, null];
+      grouped[g.student_id][g.bimester - 1] = g.grade;
+    });
+    Object.entries(grouped).forEach(([studentId, bimesters]) => {
+      const validGrades = bimesters.filter((g): g is number => g !== null);
+      averageMap[studentId] = validGrades.length === 4 ? validGrades.reduce((a, b) => a + b, 0) / 4 : null;
+    });
+  }
 
   const saveGrade = useMutation({
     mutationFn: async ({ studentId, grade }: { studentId: string; grade: number }) => {
@@ -85,12 +98,11 @@ const AdminGrades = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-grades"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-all-grades"] });
       toast.success("Nota salva!");
     },
   });
 
-  // CRUD dialogs
   const [classOpen, setClassOpen] = useState(false);
   const [subjectOpen, setSubjectOpen] = useState(false);
   const [studentOpen, setStudentOpen] = useState(false);
@@ -171,12 +183,14 @@ const AdminGrades = () => {
                     <TableRow>
                       <TableHead>Aluno</TableHead>
                       <TableHead className="w-32">Nota</TableHead>
+                      <TableHead className="w-24 text-center">Média</TableHead>
                       <TableHead className="w-20">Salvar</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredStudents.map((student) => {
                       const currentGrade = gradeMap[student.id]?.grade ?? "";
+                      const avg = averageMap[student.id];
                       return (
                         <TableRow key={student.id}>
                           <TableCell>{student.full_name}</TableCell>
@@ -190,6 +204,15 @@ const AdminGrades = () => {
                               id={`grade-${student.id}`}
                               className="w-24"
                             />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {avg !== null && avg !== undefined ? (
+                              <span className={`font-semibold ${avg >= 6 ? "text-green-600" : "text-destructive"}`}>
+                                {avg.toFixed(1)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Button

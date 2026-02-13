@@ -3,6 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+const MEDIA_APROVACAO = 6;
 
 const StudentPortal = () => {
   const { user } = useAuth();
@@ -47,13 +50,14 @@ const StudentPortal = () => {
     },
   });
 
-  // Group grades by subject
+  // Group grades by subject with average calculation
   const gradesBySubject = grades?.reduce((acc, g) => {
     const subjectName = (g.subjects as any)?.name || "—";
-    if (!acc[subjectName]) acc[subjectName] = {};
-    acc[subjectName][g.bimester] = g.grade;
+    if (!acc[subjectName]) acc[subjectName] = { bimesters: {}, grades: [] };
+    acc[subjectName].bimesters[g.bimester] = g.grade;
+    if (g.grade !== null) acc[subjectName].grades.push(g.grade);
     return acc;
-  }, {} as Record<string, Record<number, number | null>>);
+  }, {} as Record<string, { bimesters: Record<number, number | null>; grades: number[] }>);
 
   return (
     <div className="py-8">
@@ -72,29 +76,54 @@ const StudentPortal = () => {
               </CardHeader>
               <CardContent>
                 {gradesBySubject && Object.keys(gradesBySubject).length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Disciplina</TableHead>
-                        <TableHead className="text-center">1º Bim</TableHead>
-                        <TableHead className="text-center">2º Bim</TableHead>
-                        <TableHead className="text-center">3º Bim</TableHead>
-                        <TableHead className="text-center">4º Bim</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(gradesBySubject).map(([subject, bimesters]) => (
-                        <TableRow key={subject}>
-                          <TableCell className="font-medium">{subject}</TableCell>
-                          {[1, 2, 3, 4].map((b) => (
-                            <TableCell key={b} className="text-center">
-                              {bimesters[b] !== undefined && bimesters[b] !== null ? bimesters[b] : "—"}
-                            </TableCell>
-                          ))}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Disciplina</TableHead>
+                          <TableHead className="text-center">1º Bim</TableHead>
+                          <TableHead className="text-center">2º Bim</TableHead>
+                          <TableHead className="text-center">3º Bim</TableHead>
+                          <TableHead className="text-center">4º Bim</TableHead>
+                          <TableHead className="text-center">Média Final</TableHead>
+                          <TableHead className="text-center">Situação</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(gradesBySubject).map(([subject, data]) => {
+                          const allFour = data.grades.length === 4;
+                          const media = allFour ? data.grades.reduce((a, b) => a + b, 0) / 4 : null;
+                          const aprovado = media !== null ? media >= MEDIA_APROVACAO : null;
+                          return (
+                            <TableRow key={subject}>
+                              <TableCell className="font-medium">{subject}</TableCell>
+                              {[1, 2, 3, 4].map((b) => (
+                                <TableCell key={b} className="text-center">
+                                  {data.bimesters[b] !== undefined && data.bimesters[b] !== null ? data.bimesters[b] : "—"}
+                                </TableCell>
+                              ))}
+                              <TableCell className="text-center font-bold">
+                                {media !== null ? (
+                                  <span className={media >= MEDIA_APROVACAO ? "text-green-600" : "text-destructive"}>
+                                    {media.toFixed(1)}
+                                  </span>
+                                ) : "—"}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {aprovado !== null ? (
+                                  <Badge variant={aprovado ? "default" : "destructive"} className={aprovado ? "bg-green-600 hover:bg-green-700" : ""}>
+                                    {aprovado ? "Aprovado" : "Reprovado"}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Pendente</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 ) : (
                   <p className="text-muted-foreground text-sm">Nenhuma nota lançada ainda.</p>
                 )}
