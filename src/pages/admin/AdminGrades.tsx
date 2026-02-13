@@ -109,6 +109,7 @@ const AdminGrades = () => {
   const [newClass, setNewClass] = useState({ name: "", year: new Date().getFullYear() });
   const [newSubject, setNewSubject] = useState("");
   const [newStudent, setNewStudent] = useState({ full_name: "", class_id: "", enrollment_number: "" });
+  const [createdCredentials, setCreatedCredentials] = useState<{ login: string; password: string } | null>(null);
 
   const createClass = useMutation({
     mutationFn: async () => { await supabase.from("classes").insert(newClass); },
@@ -121,8 +122,32 @@ const AdminGrades = () => {
   });
 
   const createStudent = useMutation({
-    mutationFn: async () => { await supabase.from("students").insert({ ...newStudent, class_id: newStudent.class_id || null }); },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-students"] }); toast.success("Aluno cadastrado!"); setStudentOpen(false); setNewStudent({ full_name: "", class_id: "", enrollment_number: "" }); },
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-student-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
+          full_name: newStudent.full_name,
+          enrollment_number: newStudent.enrollment_number,
+          class_id: newStudent.class_id || null,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      setCreatedCredentials(data.credentials);
+      toast.success("Aluno cadastrado com usuário criado!");
+      setNewStudent({ full_name: "", class_id: "", enrollment_number: "" });
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const deleteStudent = useMutation({
@@ -246,20 +271,34 @@ const AdminGrades = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Cadastrar Aluno</DialogTitle></DialogHeader>
-                <form onSubmit={(e) => { e.preventDefault(); createStudent.mutate(); }} className="space-y-4">
-                  <div><Label>Nome Completo</Label><Input value={newStudent.full_name} onChange={(e) => setNewStudent({ ...newStudent, full_name: e.target.value })} required /></div>
-                  <div><Label>Matrícula</Label><Input value={newStudent.enrollment_number} onChange={(e) => setNewStudent({ ...newStudent, enrollment_number: e.target.value })} /></div>
-                  <div>
-                    <Label>Turma</Label>
-                    <Select value={newStudent.class_id} onValueChange={(v) => setNewStudent({ ...newStudent, class_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        {classes?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                {createdCredentials ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg space-y-2">
+                      <p className="font-semibold text-green-700 dark:text-green-300">✅ Aluno cadastrado com sucesso!</p>
+                      <p className="text-sm"><strong>Login (matrícula):</strong> {createdCredentials.login}</p>
+                      <p className="text-sm"><strong>Senha:</strong> {createdCredentials.password}</p>
+                      <p className="text-xs text-muted-foreground mt-2">Anote essas credenciais. A senha é a matrícula do aluno.</p>
+                    </div>
+                    <Button className="w-full" onClick={() => { setCreatedCredentials(null); setStudentOpen(false); }}>Fechar</Button>
                   </div>
-                  <Button type="submit" className="w-full">Cadastrar</Button>
-                </form>
+                ) : (
+                  <form onSubmit={(e) => { e.preventDefault(); createStudent.mutate(); }} className="space-y-4">
+                    <div><Label>Nome Completo</Label><Input value={newStudent.full_name} onChange={(e) => setNewStudent({ ...newStudent, full_name: e.target.value })} required /></div>
+                    <div><Label>Matrícula (será o login e senha)</Label><Input value={newStudent.enrollment_number} onChange={(e) => setNewStudent({ ...newStudent, enrollment_number: e.target.value })} required /></div>
+                    <div>
+                      <Label>Turma</Label>
+                      <Select value={newStudent.class_id} onValueChange={(v) => setNewStudent({ ...newStudent, class_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {classes?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={createStudent.isPending}>
+                      {createStudent.isPending ? "Cadastrando..." : "Cadastrar Aluno"}
+                    </Button>
+                  </form>
+                )}
               </DialogContent>
             </Dialog>
           </div>
