@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { GraduationCap, BookOpen, Users, Star, ArrowRight, Baby, School } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Star, ArrowRight, Baby, School, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 
 const Index = () => {
   const { data: recentPosts } = useQuery({
@@ -14,10 +15,31 @@ const Index = () => {
         .select("*")
         .eq("published", true)
         .order("created_at", { ascending: false })
-        .limit(3);
+        .limit(6);
       return data || [];
     },
   });
+
+  const comunicados = recentPosts?.filter((p) => p.category === "comunicado") || [];
+  const noticias = recentPosts?.filter((p) => p.category !== "comunicado") || [];
+
+  // Carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const totalSlides = comunicados.length;
+
+  const nextSlide = useCallback(() => {
+    if (totalSlides > 0) setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  }, [totalSlides]);
+
+  const prevSlide = () => {
+    if (totalSlides > 0) setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  };
+
+  useEffect(() => {
+    if (totalSlides <= 1) return;
+    const interval = setInterval(nextSlide, 5000);
+    return () => clearInterval(interval);
+  }, [nextSlide, totalSlides]);
 
   return (
     <div>
@@ -41,6 +63,63 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Comunicados Carousel */}
+      {comunicados.length > 0 && (
+        <section className="py-16 bg-muted">
+          <div className="container">
+            <h2 className="font-heading text-3xl font-bold text-center mb-8">Comunicados</h2>
+            <div className="relative max-w-3xl mx-auto">
+              <div className="overflow-hidden rounded-xl">
+                <div
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                >
+                  {comunicados.map((post) => (
+                    <div key={post.id} className="w-full flex-shrink-0 px-2">
+                      <Card className="border-2 border-primary/10">
+                        <CardContent className="p-8">
+                          {post.cover_image_url && (
+                            <img src={post.cover_image_url} alt={post.title} className="w-full h-48 object-cover rounded-lg mb-4" />
+                          )}
+                          <span className="text-xs font-medium text-accent uppercase tracking-wider">Comunicado</span>
+                          <h3 className="font-heading font-semibold text-xl mt-2 mb-2">{post.title}</h3>
+                          <p className="text-muted-foreground text-sm line-clamp-3 mb-4">{post.excerpt}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">{new Date(post.created_at).toLocaleDateString("pt-BR")}</span>
+                            <Link to={`/noticias/${post.id}`} className="text-primary text-sm font-medium inline-flex items-center hover:underline">
+                              Ler mais <ArrowRight className="ml-1 h-3 w-3" />
+                            </Link>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {totalSlides > 1 && (
+                <>
+                  <Button variant="outline" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 rounded-full bg-background shadow-md" onClick={prevSlide}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 rounded-full bg-background shadow-md" onClick={nextSlide}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <div className="flex justify-center gap-2 mt-4">
+                    {comunicados.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentSlide(i)}
+                        className={`w-2.5 h-2.5 rounded-full transition-colors ${i === currentSlide ? "bg-primary" : "bg-primary/20"}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Níveis de Ensino */}
       <section className="py-20 bg-background">
@@ -96,19 +175,19 @@ const Index = () => {
       </section>
 
       {/* Últimas Notícias */}
-      {recentPosts && recentPosts.length > 0 && (
+      {noticias.length > 0 && (
         <section className="py-20 bg-background">
           <div className="container">
             <h2 className="font-heading text-3xl font-bold text-center mb-12">Últimas Notícias</h2>
             <div className="grid md:grid-cols-3 gap-8">
-              {recentPosts.map((post) => (
+              {noticias.slice(0, 3).map((post) => (
                 <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   {post.cover_image_url && (
                     <img src={post.cover_image_url} alt={post.title} className="w-full h-48 object-cover" />
                   )}
                   <CardContent className="p-6">
                     <span className="text-xs font-medium text-accent uppercase tracking-wider">
-                      {post.category === "comunicado" ? "Comunicado" : post.category === "evento" ? "Evento" : "Notícia"}
+                      {post.category === "evento" ? "Evento" : "Notícia"}
                     </span>
                     <h3 className="font-heading font-semibold text-lg mt-2 mb-2">{post.title}</h3>
                     <p className="text-muted-foreground text-sm line-clamp-2">{post.excerpt}</p>
