@@ -338,11 +338,23 @@ const AdminGrades = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {subjects?.map((s) => (
-                    <div key={s.id} className="flex justify-between items-center p-2 bg-muted rounded-md">
-                      <span className="text-sm font-medium">{s.name}</span>
-                    </div>
-                  ))}
+                  {subjects?.map((s) => {
+                    // Calculate average for this subject across all students and bimesters
+                    const subjectGrades = allGrades?.filter(g => g.subject_id === s.id && g.grade !== null).map(g => g.grade) || [];
+                    const avg = subjectGrades.length > 0 ? subjectGrades.reduce((a, b) => a + b, 0) / subjectGrades.length : null;
+                    return (
+                      <div key={s.id} className="flex justify-between items-center p-3 bg-muted rounded-md">
+                        <span className="text-sm font-medium">{s.name}</span>
+                        {avg !== null ? (
+                          <span className={`text-sm font-semibold ${avg >= 6 ? "text-green-600" : "text-destructive"}`}>
+                            Média: {avg.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Sem notas</span>
+                        )}
+                      </div>
+                    );
+                  })}
                   {(!subjects || subjects.length === 0) && <p className="text-sm text-muted-foreground">Nenhuma disciplina cadastrada.</p>}
                 </div>
               </CardContent>
